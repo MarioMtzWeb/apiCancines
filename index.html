@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Api Canciones</title>
+    <style>
+        html{
+            box-sizing: border-box;
+            font-family: sans-serif;
+            color: #222;
+        }
+        body{
+            margin: 0;
+            background: rgb(238,174,202);
+            background: radial-gradient(circle, rgba(238,174,202,1) 0%, rgba(148,187,233,1) 100%);
+            display: flex;
+            justify-content:center;
+            align-items: center;
+        }
+        img{
+            max-width: 100%;
+            height: auto;
+        }
+        .container{
+            padding: 1rem;
+            border-radius: .5rem;
+            margin: 1rem auto;
+            width: 80vw;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .form{
+            width: 90%;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .form input,
+        .form label{
+            margin-bottom: .5rem;
+        }
+        main{
+            display: flex;
+            flex-direction: column-reverse;
+            text-align: center;
+        }
+
+        input[type="submit"]{
+            cursor: pointer;
+            border: none;
+            background-color: rgba(255, 255, 255, 0.5);
+            padding: .5rem;
+            border-radius: .5rem;
+            transition: background-color .5s ease;
+            font-size: .9rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        input[type="submit"]:hover{
+            background-color: rgba(255, 255, 255, 1);
+        }
+        .loader{
+            display: none;
+            margin: auto;
+        }
+        .song blockquote{
+            white-space: pre-wrap;
+        }
+        @media screen and (min-width: 800px){
+            main{
+                flex-direction: row;
+            }
+            main > *{
+                padding: 1rem;
+                flex-basis: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Buscador de canciones</h2>
+        <form action="" id="song-search" class="form">
+            <label for="artist">Nombre del Artista: </label>
+            <input type="text" name="artist" class="inputArt" placeholder="Nombre del artista" required>
+            <br>
+            <label for="song">Cancion:</label>
+            <input type="text" name="song" class="inputSong" placeholder="Nombre de la canción" required>
+            <br>
+            <input type="submit" value="Obtener">
+        </form>
+        <img class="loader" src="loader.svg" alt="Cargando...">
+        <aside class="error"></aside>
+        <main>
+            <article class="artist">
+            </article>
+            <article class="song">
+                
+            </article>
+        </main>
+    </div>
+    <script>
+        const d = document,
+        $form = d.getElementById('song-search'),
+        $loader = d.querySelector('.loader'),
+        $error = d.querySelector('.error'),
+        $main = d.querySelector('main'),
+        $artist = d.querySelector('.artist'),
+        $song = d.querySelector('.song'),
+        $inputArt = d.querySelector('.inputArt'),
+        $inputSong = d.querySelector('.inputSong');
+
+        
+        $form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try{
+            $loader.style.display = 'block';
+            let artist = $inputArt.value.toLowerCase(),
+            song = $inputSong.value.toLowerCase(),
+            $artistTemplate = '',
+            $songTemplate = '',
+            artistAPI = `https://theaudiodb.com/api/v1/json/2/search.php?s=${artist}`,
+            songAPI = `https://api.lyrics.ovh/v1/${artist}/${song}`,
+            artistFetch = fetch(artistAPI),
+            songFetch = fetch(songAPI),
+            [artistRes, songRes] = await Promise.all([artistFetch, songFetch]),
+            artistData = await artistRes.json(),
+            songData = await songRes.json();
+
+            console.log(artistRes, artistData);
+            console.log(songRes, songData);
+
+            if(artistData.artists === null){
+                $artistTemplate = `<h2>No existe el interprete <mark>${artist}</mark></h2>`;
+            }else{
+                let artist = artistData.artists[0];
+                $artistTemplate = `
+                    <h2>${artist.strArtist}</h2>
+                    <img src="${artist.strArtistThumb}" alt="${artist.strArtist}">
+                    <p>${artist.intBornYear} - ${artist.intDiedYear || 'Presente'}</p>
+                    <p>${artist.strCountry}</p>
+                    <p>${artist.strGenre} - ${artist.strStyle}</p>
+                    <a href="://${artist.strWebsite}" target"_blank">Sitio Web</a>
+                    <p>${artist.strBiographyES}</p>
+                `;
+            }
+
+            if(songData.error){
+                $songTemplate = `<h2>No existe la canción <mark>${song}</mark></h2>`;
+            }else{
+                $songTemplate = `
+                    <h2>${song.toUpperCase()}</h2>
+                    <blockquote>${songData.lyrics}</blockquote>
+                `;
+            }
+
+            $loader.style.display = 'none';
+            $artist.innerHTML = $artistTemplate;
+            $song.innerHTML = $songTemplate;
+
+            $form.reset();
+
+            }catch(err){
+                console.error(err);
+                let message = err.statusText || 'Ocurrio un error';
+                $error.innerHTML = `<p>Error ${err.statusText}: ${message}</p>`;
+                $loader.style.display = 'none';
+            }
+
+        });
+
+    </script>    
+</body>
+</html>
